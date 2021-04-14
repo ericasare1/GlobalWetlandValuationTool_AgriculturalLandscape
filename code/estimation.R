@@ -78,9 +78,9 @@ ggplot(df_prov, aes(x= studyid, y = lnprov)) +
 boxplot(df_prov$lnprov) 
 boxplot(df_regul$lnregul) 
 
-#1. Correlation matrix
+#1. Correlation matrix Provisioning
 df_cor_prov <- df_prov_acre %>% 
-  dplyr::select(lnacre, lnyear, lnpop, lnagprod, amphibians, birds, peer_review,
+  dplyr::select(lnprov, lnacre, lnyear, lnpop, lnagprod, amphibians, birds, peer_review,
                  methodology, wl_policy, ecosystemservicesgoal, usepenalties,
                  useincentives, high_income, latitude, longitude)
 
@@ -94,3 +94,18 @@ head(melted_cormat_prov)
 ggplot(data = melted_cormat_prov, aes(x=Var1, y=Var2, fill=value)) + 
   geom_tile()
 
+#1. Correlation matrix regulating
+df_cor_reg <- df_regul_acre %>% 
+  dplyr::select(lnregul, lnacre, lnyear, lnpop, lnagprod, amphibians, birds, peer_review,
+                methodology, wl_policy, ecosystemservicesgoal, usepenalties,
+                useincentives, high_income, latitude, longitude)
+
+cormat_reg <- round(cor(df_cor_reg),2)
+head(cormat_reg)
+#Reshape above matrix
+library(reshape2)
+melted_cormat_reg <- melt(cormat_reg)
+head(melted_cormat_reg)
+#correlation heat map
+ggplot(data = melted_cormat_reg, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()
