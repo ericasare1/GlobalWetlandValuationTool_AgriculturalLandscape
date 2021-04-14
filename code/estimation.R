@@ -24,9 +24,14 @@ df_acre <- read_csv("data/final_estimation.csv") %>%
     lnamphibians = log(amphibians +1),
     lnbirds = log(birds +1),
     low_income = ifelse(low_lowmid_uppmid_high ==1,1,0),
-    high_income = ifelse(low_lowmid_uppmid_high ==3,1,0)   
+    high_income = ifelse(low_lowmid_uppmid_high ==3,1,0),
+    lat_mod = latitude + 38,
+    log_mod = longitude + 128,
+    lnlat = log(lat_mod),
+    lnlong = log(log_mod)
   )
-  
+
+ 
 
 df <- read_csv("data/final_estimation.csv") %>%
   mutate(
@@ -117,7 +122,7 @@ ggplot(data = melted_cormat_reg, aes(x=Var1, y=Var2, fill=value)) +
 mixed_full_prov <- lmer(lnprov ~ lnacre + lnpop +
                           lnagprod + high_income +
                           peer_review + methodology +
-                          amphibians +
+                          lnamphibians + lnbirds +
                           wl_policy + ecosystemservicesgoal +
                           usepenalties + 
                           latitude + longitude + (1 |studyid), data= df_prov_acre)
@@ -165,6 +170,7 @@ lm_full_reg <- lm(lnregul ~ lnacre  + lnpop +
                      wl_policy + 
                     latitude + longitude, data= df_regul_acre)
 
+
 lm_full_reg_ll <- lm(lnregul ~ acreage + pop_Density +
                    agProd + high_income +
                     peer_review + methodology +
@@ -176,6 +182,12 @@ summary(lm_full_reg_ll)
 lmtest::bptest(lm_full_reg)  # Breusch-Pagan test
 car::vif(lm_full_reg)
 
+#extracting AIC info for both models to examine how they compared to each other regarding model fit
+extractAIC(lm_full_prov)
+extractAIC(lm_full_prov_ll)
+extractAIC(lm_full_reg)
+extractAIC(lm_full_reg_ll)
+
 # Model Results in Table
 stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
           type = "html",
@@ -184,23 +196,30 @@ stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
           single.row = TRUE)
 
 #Transfer Errors
-set.seed(1200)
+df_prediction_prov <- data.frame(fit = predict(lm_full_prov)) 
 
-#US-Canada model: Model 1 
-df_prediction_prov <- data.frame(fit = predict(lm_full_prov_ll, data = df_prov_acre)) 
-min(df_prediction_prov$fit) # to check if there are negative predictions: must not be true for log-log
-#There is no negative prediction so good to go
-
-transfer_error_fulldata_m1 <- df_prediction_alldata_m1 %>%
-  tibble(wtp = df_can$wtp_2017) %>%
+transfer_error_prov <- df_prediction_prov %>%
+  tibble(wtp = exp(df_prov_acre$lnprov)) %>%
   mutate(wtp_ypred = exp(fit) - 1,
          TE_MA = as.numeric((abs(wtp - wtp_ypred)/wtp)*100),
-         TE_UnitTransfer = as.numeric((abs(wtp - mean(wtp))/wtp)*100),
-         lowerC1_wtp = exp(lwr) - 1,
-         upperC1_wtp = exp(upr) - 1)
+         TE_UnitTransfer = as.numeric((abs(wtp - mean(wtp))/wtp)*100))
 
-transfer_error_fulldata %>% View()
-mean(transfer_error_fulldata_m1$TE_MA)
-mean(transfer_error_fulldata_m1$TE_UnitTransfer)
-write_csv(transfer_error_fulldata_m1, "data/transfer_error_alldata_m1.csv")
+median(transfer_error_prov$TE_MA)
+median(transfer_error_prov$TE_UnitTransfer)
+write_csv(transfer_error_prov, "data/transfer_error_prov.csv")
+
+#reg
+df_prediction_reg <- data.frame(fit = predict(lm_full_reg))
+
+transfer_error_reg <- df_prediction_reg %>%
+  tibble(wtp = exp(df_regul_acre$lnregul) - 1) %>%
+  mutate(wtp_ypred = exp(fit) - 1,
+         TE_MA = as.numeric((abs(wtp - wtp_ypred)/wtp)*100),
+         TE_UnitTransfer = as.numeric((abs(wtp - mean(wtp))/wtp)*100))
+
+
+median(transfer_error_reg$TE_MA)
+median(transfer_error_prov$TE_UnitTransfer)
+write_csv(transfer_error_reg, "data/transfer_error_reg.csv")
+
 
