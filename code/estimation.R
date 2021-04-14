@@ -137,23 +137,70 @@ ranova(mixed_full_reg)
 
 #<<<<<<<<<<<<<<<<< OLS  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # .......................Provisioning Model Estimation....................
-#A.
-lm_full_prov <- lm(lnprov ~ lnacre + lnyear + lnpop +
+#A.1. log -log prov
+lm_full_prov <- lm(lnprov ~ lnacre + lnpop +
                      lnagprod + high_income +
                      peer_review + methodology +
-                     amphibians +
+                     lnamphibians + lnbirds +
                      wl_policy + ecosystemservicesgoal +
                      usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
-summary(lm_full_prov)
-lmtest::bptest(lm_full_prov)  # Breusch-Pagan test
+
+#A.1. log -linear prov
+lm_full_prov_ll <- lm(lnprov ~ acreage + pop_Density +
+                     agProd + high_income +
+                     peer_review + methodology +
+                     amphibians + birds +
+                     wl_policy + ecosystemservicesgoal +
+                     usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
+
+summary(lm_full_prov_ll)
+lmtest::bptest(lm_full_prov_ll)  # Breusch-Pagan test
 car::vif(lm_full_prov)
 
 #B. Regulation Model
-lm_full_reg <- lm(lnregul ~ lnacre + lnyear + lnpop +
+lm_full_reg <- lm(lnregul ~ lnacre  + lnpop +
                      lnagprod + high_income +
                      peer_review + methodology +
-                     amphibians +
-                     wl_policy + latitude + longitude, data= df_regul_acre)
-summary(lm_full_reg)
+                    lnamphibians + lnbirds +
+                     wl_policy + 
+                    latitude + longitude, data= df_regul_acre)
+
+lm_full_reg_ll <- lm(lnregul ~ acreage + pop_Density +
+                   agProd + high_income +
+                    peer_review + methodology +
+                    amphibians + birds +
+                    wl_policy + 
+                    latitude + longitude, data= df_regul_acre)
+
+summary(lm_full_reg_ll)
 lmtest::bptest(lm_full_reg)  # Breusch-Pagan test
 car::vif(lm_full_reg)
+
+# Model Results in Table
+stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
+          type = "html",
+          out="output/model_results.doc",
+          style = "qje",
+          single.row = TRUE)
+
+#Transfer Errors
+set.seed(1200)
+
+#US-Canada model: Model 1 
+df_prediction_prov <- data.frame(fit = predict(lm_full_prov_ll, data = df_prov_acre)) 
+min(df_prediction_prov$fit) # to check if there are negative predictions: must not be true for log-log
+#There is no negative prediction so good to go
+
+transfer_error_fulldata_m1 <- df_prediction_alldata_m1 %>%
+  tibble(wtp = df_can$wtp_2017) %>%
+  mutate(wtp_ypred = exp(fit) - 1,
+         TE_MA = as.numeric((abs(wtp - wtp_ypred)/wtp)*100),
+         TE_UnitTransfer = as.numeric((abs(wtp - mean(wtp))/wtp)*100),
+         lowerC1_wtp = exp(lwr) - 1,
+         upperC1_wtp = exp(upr) - 1)
+
+transfer_error_fulldata %>% View()
+mean(transfer_error_fulldata_m1$TE_MA)
+mean(transfer_error_fulldata_m1$TE_UnitTransfer)
+write_csv(transfer_error_fulldata_m1, "data/transfer_error_alldata_m1.csv")
+
