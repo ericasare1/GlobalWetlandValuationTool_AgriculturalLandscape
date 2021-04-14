@@ -134,3 +134,26 @@ mixed_full_reg <- lmer(lnregul ~ lnacre + lnpop +
 #Model Diagnostics
 #checking if the random coefficient model is really significant
 ranova(mixed_full_reg) 
+
+#<<<<<<<<<<<<<<<<< OLS  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# .......................Provisioning Model Estimation....................
+#A.
+lm_full_prov <- lm(lnprov ~ lnacre + lnyear + lnpop +
+                     lnagprod + high_income +
+                     peer_review + methodology +
+                     amphibians +
+                     wl_policy + ecosystemservicesgoal +
+                     usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
+summary(lm_full_prov)
+lmtest::bptest(lm_full_prov)  # Breusch-Pagan test
+car::vif(lm_full_prov)
+
+#B. Regulation Model
+lm_full_reg <- lm(lnregul ~ lnacre + lnyear + lnpop +
+                     lnagprod + high_income +
+                     peer_review + methodology +
+                     amphibians +
+                     wl_policy + latitude + longitude, data= df_regul_acre)
+summary(lm_full_reg)
+lmtest::bptest(lm_full_reg)  # Breusch-Pagan test
+car::vif(lm_full_reg)
