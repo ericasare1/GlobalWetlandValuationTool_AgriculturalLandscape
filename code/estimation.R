@@ -109,3 +109,28 @@ head(melted_cormat_reg)
 #correlation heat map
 ggplot(data = melted_cormat_reg, aes(x=Var1, y=Var2, fill=value)) + 
   geom_tile()
+
+# Mixed models
+
+#B. Mixed Model: Random Coefficient Model 
+#1. Full - Random intercept model (...)
+mixed_full_prov <- lmer(lnprov ~ lnacre + lnpop +
+                          lnagprod + high_income +
+                          peer_review + methodology +
+                          amphibians +
+                          wl_policy + ecosystemservicesgoal +
+                          usepenalties + 
+                          latitude + longitude + (1 |studyid), data= df_prov_acre)
+ranova(mixed_full_prov) 
+
+
+mixed_full_reg <- lmer(lnregul ~ lnacre + lnpop +
+                          lnagprod + high_income +
+                          peer_review + methodology +
+                          amphibians +
+                          wl_policy + ecosystemservicesgoal +
+                          usepenalties + 
+                          latitude + longitude + (1 |studyid), data= df_regul_acre)
+#Model Diagnostics
+#checking if the random coefficient model is really significant
+ranova(mixed_full_reg) 
