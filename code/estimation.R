@@ -157,7 +157,6 @@ lm_full_prov_ll <- lm(lnprov ~ acreage + pop_Density +
                      amphibians + birds +
                      wl_policy + ecosystemservicesgoal +
                      usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
-
 summary(lm_full_prov_ll)
 lmtest::bptest(lm_full_prov_ll)  # Breusch-Pagan test
 car::vif(lm_full_prov)
