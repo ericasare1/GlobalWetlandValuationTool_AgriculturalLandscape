@@ -149,7 +149,6 @@ lm_full_prov <- lm(lnprov ~ lnacre + lnpop +
                      lnamphibians + lnbirds +
                      wl_policy + ecosystemservicesgoal +
                      usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
-
 #A.1. log -linear prov
 lm_full_prov_ll <- lm(lnprov ~ acreage + pop_Density +
                      agProd + high_income +
@@ -207,6 +206,7 @@ median(transfer_error_prov$TE_MA)
 median(transfer_error_prov$TE_UnitTransfer)
 write_csv(transfer_error_prov, "data/transfer_error_prov.csv")
 
+
 #reg
 df_prediction_reg <- data.frame(fit = predict(lm_full_reg))
 
@@ -245,18 +245,29 @@ train_control <- trainControl(method = "repeatedcv",
 # building the model and
 # predicting the target varibale
 # as per the Naive Bayes classifier
+summary(lm_full_prov )
+
 cv_model_prov <- train(lnprov ~ lnacre + lnpop +
                  lnagprod + high_income +
                  peer_review + methodology +
                  lnamphibians + lnbirds +
-                 wl_policy + ecosystemservicesgoal +
-                 usepenalties + useincentives + latitude + longitude,
+                 wl_policy + latitude + longitude,
                data = df_prov_acre,
                method = "lm",
                trControl = train_control)
 # model after calcualting
-# prediction error in each case
 print(cv_model_prov)
+
+#Mean value transfer
+df_prov_acre <- df_prov_acre %>%
+  mutate(mean_lnprov = mean(lnprov))
+# predicting the target variable
+predictions <- predict(lm_full_prov, df_prov_acre, na.rm = T)
+# computing model performance metrics
+data.frame(RMSE = RMSE(predictions, df_prov_acre$mean_lnprov),
+           MAE = MAE(predictions, df_prov_acre$mean_lnprov))
+
+summary(lm_full_reg)
 
 cv_model_reg <- train(lnregul ~ lnacre  + lnpop +
                         lnagprod + high_income +
