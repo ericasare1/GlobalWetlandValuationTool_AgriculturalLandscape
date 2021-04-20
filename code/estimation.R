@@ -6,7 +6,7 @@ if (!require(pacman)) {
   library(pacman)}
 
 # Load Packages
-p_load(sjPlot, tableone, stargazer, broom, tidyverse, lme4, car, MASS, WeMix, metafor, merTools,  brms, rstanarm, rstan, sjstats, lmerTest)
+p_load(sjPlot, tableone, stargazer, broom, tidyverse, lme4, car, MASS, WeMix, metafor, merTools,  brms, rstanarm, rstan, sjstats, lmerTest, caret)
 
 # Import data
 #-----------------------------------------------
@@ -222,4 +222,37 @@ median(transfer_error_prov$TE_UnitTransfer)
 write_csv(transfer_error_reg, "data/transfer_error_reg.csv")
 
 #.....Cross validation Methods
+#updating r
+install.packages("lme4", dependencies = TRUE)
+library(lme4)
+methods(sigma)
+install.packages("pbkrtest", dependencies = TRUE)
+library(caret)
+# package to compute 
+# cross - validation methods
+library(caret)
+
+# setting seed to generate a
+# reproducible random sampling
+set.seed(123)
+
+# define training control which
+# generates parameters that further
+# control how models are created
+train_control <- trainControl(method = "repeatedcv",
+                              number = 10, repeats = 3)
+
+# building the model and
+# predicting the target varibale
+# as per the Naive Bayes classifier
+model <- train(lnprov ~ lnacre + lnpop +
+                 lnagprod + high_income +
+                 peer_review + methodology +
+                 lnamphibians + lnbirds +
+                 wl_policy + ecosystemservicesgoal +
+                 usepenalties + useincentives + latitude + longitude,
+               data = df_prov_acre,
+               method = "lm",
+               trControl = train_control)
+
 
