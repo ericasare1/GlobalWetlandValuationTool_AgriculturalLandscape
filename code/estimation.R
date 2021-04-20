@@ -245,7 +245,84 @@ train_control <- trainControl(method = "repeatedcv",
 # building the model and
 # predicting the target varibale
 # as per the Naive Bayes classifier
-model <- train(lnprov ~ lnacre + lnpop +
+cv_model_prov <- train(lnprov ~ lnacre + lnpop +
+                 lnagprod + high_income +
+                 peer_review + methodology +
+                 lnamphibians + lnbirds +
+                 wl_policy + ecosystemservicesgoal +
+                 usepenalties + useincentives + latitude + longitude,
+               data = df_prov_acre,
+               method = "lm",
+               trControl = train_control)
+# model after calcualting
+# prediction error in each case
+print(cv_model_prov)
+
+cv_model_reg <- train(lnregul ~ lnacre  + lnpop +
+                        lnagprod + high_income +
+                        peer_review + methodology +
+                        lnamphibians + lnbirds +
+                        wl_policy + 
+                        latitude + longitude,
+                       data = df_regul_acre,
+                       method = "lm",
+                       trControl = train_control)
+
+print(cv_model_reg)
+
+#other CV methods
+# R program to implement
+# validation set approach
+
+# setting seed to generate a
+# reproducible random sampling
+set.seed(123)
+
+# creating training data as 80% of the dataset
+random_sample <- createDataPartition(df_prov_acre $ lnprov,
+                                     p = 0.8, list = FALSE)
+
+# generating training dataset
+# from the random_sample
+training_dataset <- df_prov_acre[random_sample, ]
+
+# generating testing dataset
+# from rows which are not
+# included in random_sample
+testing_dataset <- df_prov_acre[-random_sample, ]
+
+# Building the model
+
+# training the model by assigning sales column
+# as target variable and rest other columns
+# as independent variables
+model_vs <- lm(lnprov ~ lnacre + lnpop +
+              lnagprod + high_income +
+              peer_review + methodology +
+              lnamphibians + lnbirds +
+              wl_policy + ecosystemservicesgoal +
+              usepenalties + useincentives + latitude + longitude, 
+            data = training_dataset)
+
+# predicting the target variable
+predictions <- predict(model, testing_dataset)
+
+# computing model performance metrics
+data.frame( R2 = R2(predictions, testing_dataset $ lnprov),
+            RMSE = RMSE(predictions, testing_dataset $ lnprov),
+            MAE = MAE(predictions, testing_dataset $ lnprov))
+
+# R program to implement
+# Leave one out cross validation
+
+# defining training control
+# as Leave One Out Cross Validation
+train_control <- trainControl(method = "LOOCV")
+
+# training the model by assigning sales column
+# as target variable and rest other column
+# as independent varaible
+model_loocv <- train(lnprov ~ lnacre + lnpop +
                  lnagprod + high_income +
                  peer_review + methodology +
                  lnamphibians + lnbirds +
@@ -255,4 +332,40 @@ model <- train(lnprov ~ lnacre + lnpop +
                method = "lm",
                trControl = train_control)
 
+# printing model performance metrics
+# along with other details
+print(model_loocv)
 
+
+# R program to implement
+# K-fold cross-validation
+
+# setting seed to generate a
+# reproducible random sampling
+set.seed(125)
+
+# defining training control
+# as cross-validation and
+# value of K equal to 10
+train_control <- trainControl(method = "cv",
+                              number = 10)
+
+# training the model by assigning sales column
+# as target variable and rest other column
+# as independent varaible
+model_cv <- train(lnprov ~ lnacre + lnpop +
+                 lnagprod + high_income +
+                 peer_review + methodology +
+                 lnamphibians + lnbirds +
+                 wl_policy + ecosystemservicesgoal +
+                 usepenalties + useincentives + latitude + longitude,
+               data = df_prov_acre,
+               method = "lm",
+               trControl = train_control)
+
+# printing model performance metrics
+# along with other details
+print(model_cv)
+
+
+ 
