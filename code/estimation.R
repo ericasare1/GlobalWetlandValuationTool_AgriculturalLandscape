@@ -90,7 +90,7 @@ df_cor_prov <- df_prov_acre %>%
                  useincentives, high_income, latitude, longitude)
 
 cormat_prov <- round(cor(df_cor_prov),2)
-head(cormat_prov)
+df_corel <- data.frame(cormat_prov) %>% View
 #Reshape above matrix
 library(reshape2)
 melted_cormat_prov <- melt(cormat_prov)
@@ -131,7 +131,7 @@ ranova(mixed_full_prov)
 
 mixed_full_reg <- lmer(lnregul ~ lnacre + lnpop +
                           lnagprod + high_income +
-                          peer_review + methodology +
+                          methodology +
                           amphibians +
                           wl_policy + ecosystemservicesgoal +
                           usepenalties + 
@@ -143,48 +143,130 @@ ranova(mixed_full_reg)
 #<<<<<<<<<<<<<<<<< OLS  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # .......................Provisioning Model Estimation....................
 #A.1. log -log prov
+
 lm_full_prov <- lm(lnprov ~ lnacre + lnpop +
+                          lnagprod + high_income +
+                          peer_review + methodology + 
+                          lnbirds + lnamphibians + 
+                          wl_policy + useincentives + usepenalties +
+                          ecosystemservicesgoal + latitude + longitude, data= df_prov_acre)
+
+lm_full_prov_rest <- lm(lnprov ~ lnacre + lnpop +
                      lnagprod + high_income +
-                     peer_review + methodology +
-                     lnamphibians + lnbirds +
-                     wl_policy + ecosystemservicesgoal +
-                     usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
+                     peer_review +
+                     lnamphibians + useincentives + 
+                     ecosystemservicesgoal + latitude + longitude, data= df_prov_acre)
+summary(lm_full_prov)
+summary(lm_full_prov_rest)
 #A.1. log -linear prov
-lm_full_prov_ll <- lm(lnprov ~ acreage + pop_Density +
-                     agProd + high_income +
-                     peer_review + methodology +
-                     amphibians + birds +
-                     wl_policy + ecosystemservicesgoal +
-                     usepenalties + useincentives + latitude + longitude, data= df_prov_acre)
-summary(lm_full_prov_ll)
+
+lm_full_prov_ln <- lm(lnprov ~ acreage + pop_Density +
+                      agProd + high_income +
+                      peer_review + methodology +
+                      birds + amphibians +
+                      wl_policy + useincentives + usepenalties +
+                      ecosystemservicesgoal + latitude + longitude, data= df_prov_acre)
+
+lm_full_prov_restln <- lm(lnprov ~ acreage + pop_Density +
+                            agProd + high_income +
+                            peer_review + 
+                            ecosystemservicesgoal +
+                            latitude + longitude, data= df_prov_acre)
+summary(lm_full_prov_ln)
+summary(lm_full_prov_restln)
+
 lmtest::bptest(lm_full_prov_ll)  # Breusch-Pagan test
 car::vif(lm_full_prov)
 
+#extracting AIC info for both models to examine how they compared to each other regarding model fit
+extractAIC(lm_full_prov)
+extractAIC(lm_full_prov_rest)
+extractAIC(lm_full_prov_ln)
+extractAIC(lm_full_prov_restln) #best
+summary(lm_full_prov_restln)
+
+summary(lm_full_prov_restln)
+car::vif(lm_full_prov_rest)
+
+
+#mean value error
+# predicting the target variable
+mean_lnwtp <- mean(df_prov_acre$lnprov)
+
+predictions <- data.frame(predict = predict(lm_full_prov_restln, df_prov_acre)) %>%
+  mutate(mean_lnprov = mean_lnwtp)
+
+# computing model performance metrics
+data.frame( RMSE = RMSE(predictions$predict, predictions$mean_lnprov, na.rm = T),
+            MAE = MAE(predictions$predict, predictions$mean_lnprov, na.rm = T))
+#repeated Cv
+cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
+                                agProd + high_income +
+                                peer_review + 
+                                ecosystemservicesgoal +
+                                latitude + longitude,
+                              data = df_prov_acre,
+                              method = "lm",
+                              trControl = train_control)
+print(cv_model_prov_restln)
+
 #B. Regulation Model
-lm_full_reg <- lm(lnregul ~ lnacre  + lnpop +
+lm_full_reg <- lm(lnregul ~ lnacre + lnpop +
                      lnagprod + high_income +
-                     peer_review + methodology +
-                    lnamphibians + lnbirds +
-                     wl_policy + 
-                    latitude + longitude, data= df_regul_acre)
-
-
-lm_full_reg_ll <- lm(lnregul ~ acreage + pop_Density +
-                   agProd + high_income +
-                    peer_review + methodology +
-                    amphibians + birds +
-                    wl_policy + 
-                    latitude + longitude, data= df_regul_acre)
-
-summary(lm_full_reg_ll)
+                     peer_review + methodology + 
+                     lnbirds + lnamphibians + 
+                     wl_policy + useincentives + usepenalties +
+                     ecosystemservicesgoal + latitude + longitude, data= df_regul_acre)
 lmtest::bptest(lm_full_reg)  # Breusch-Pagan test
 car::vif(lm_full_reg)
 
-#extracting AIC info for both models to examine how they compared to each other regarding model fit
-extractAIC(lm_full_prov)
-extractAIC(lm_full_prov_ll)
+lm_full_reg_rest <- lm(lnregul ~ lnacre + lnpop +
+                          lnagprod + high_income +
+                          methodology + 
+                          lnamphibians + 
+                          ecosystemservicesgoal + latitude + longitude, data= df_regul_acre)
+
+lmtest::bptest(lm_full_reg_rest)  # Breusch-Pagan test
+car::vif(lm_full_reg_rest)
+
+summary(lm_full_reg)
+summary(lm_full_reg_rest)
+
+
+lm_full_reg_ln <- lm(lnregul ~ acreage + pop_Density +
+                        agProd + high_income +
+                        peer_review + methodology +
+                        birds + amphibians +
+                        wl_policy + useincentives + usepenalties +
+                        ecosystemservicesgoal + latitude + longitude, data= df_regul_acre)
+lmtest::bptest(lm_full_reg_ln)  # Breusch-Pagan test
+car::vif(lm_full_reg_ln)
+
+lm_full_reg_restln <- lm(lnregul ~ acreage + pop_Density +
+                           agProd + high_income +
+                           methodology + 
+                           wl_policy + 
+                           latitude + longitude,
+                         data= df_regul_acre)
+lmtest::bptest(lm_full_reg_restln)  # Breusch-Pagan test
+car::vif(lm_full_reg_restln)
+summary(lm_full_reg_restln) 
+
 extractAIC(lm_full_reg)
-extractAIC(lm_full_reg_ll)
+extractAIC(lm_full_reg_rest)
+extractAIC(lm_full_reg_ln)  #best
+extractAIC(lm_full_reg_restln)
+
+#repeated Cv
+cv_model_reg_restln <- train(lnregul ~ acreage + pop_Density +
+                               agProd + high_income +
+                               methodology + 
+                               wl_policy + 
+                               latitude + longitude,
+                              data = df_regul_acre,
+                              method = "lm",
+                              trControl = train_control)
+print(cv_model_reg_restln)
 
 # Model Results in Table
 stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
@@ -248,10 +330,10 @@ train_control <- trainControl(method = "repeatedcv",
 summary(lm_full_prov )
 
 cv_model_prov <- train(lnprov ~ lnacre + lnpop +
-                 lnagprod + high_income +
-                 peer_review + methodology +
-                 lnamphibians + lnbirds +
-                 wl_policy + latitude + longitude,
+                         lnagprod + high_income +
+                         peer_review +
+                         lnamphibians +
+                         wl_policy + latitude + longitude,
                data = df_prov_acre,
                method = "lm",
                trControl = train_control)
@@ -260,9 +342,13 @@ print(cv_model_prov)
 
 #Mean value transfer
 df_prov_acre <- df_prov_acre %>%
-  mutate(mean_lnprov = mean(lnprov))
-# predicting the target variable
-predictions <- predict(lm_full_prov, df_prov_acre, na.rm = T)
+  dplyr::mutate(mean_lnprov = mean(lnprov)) 
+
+predictions = predict(lm_full_prov, df_prov) 
+
+data.frame(RMSE = RMSE(predictions, df_prov_acre$mean_lnprov),
+         MAE = MAE(predictions, df_prov_acre$mean_lnprov))
+
 # computing model performance metrics
 data.frame(RMSE = RMSE(predictions, df_prov_acre$mean_lnprov),
            MAE = MAE(predictions, df_prov_acre$mean_lnprov))
