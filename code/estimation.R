@@ -174,16 +174,69 @@ summary(lm_full_prov_restln)
 car::vif(lm_full_prov_rest)
 
 
-#mean value error
-# predicting the target variable
-mean_lnwtp <- mean(df_prov_acre$lnprov)
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<mean value error
+set.seed(123) #set random seed for reprocibility of results
 
-predictions <- data.frame(predict = predict(lm_full_prov_restln, df_prov_acre)) %>%
-  mutate(mean_lnprov = mean_lnwtp)
+#splitting a data set to do 10 fold cv using the cvTools package
+fold_cv = function(data,k){
+  folds=cvTools::cvFolds(nrow(df),K=k)
+  invisible(folds)
+}
 
-# computing model performance metrics
-data.frame( RMSE = RMSE(predictions$predict, predictions$mean_lnprov, na.rm = T),
-            MAE = MAE(predictions$predict, predictions$mean_lnprov, na.rm = T))
+#We apply the fold_cv function on our dataset… We set k=10 for a 10 folds CV
+
+fold <- df_prov_acre %>% fold_cv(., k=10)
+str(fold)
+#creating a temp data to store results
+temp2 <- df_prov_acre %>% 
+  mutate(Fold=rep(0,nrow(df_prov_acre)),
+         holdoutpred=rep(0,nrow(df_prov_acre)),
+         MSE=rep(0,nrow(.)),
+         RMSE=rep(0,nrow(.)),
+         MAE=rep(0,nrow(.)),
+         R2=rep(0,nrow(.)),
+         AIC=rep(0,nrow(.)),
+         BIC=rep(0,nrow(.)))
+
+for(i in 1:10){
+  train=temp2[fold$subsets[fold$which != i], ]  #set the first n-1 dataset for training
+  test=temp2[fold$subsets[fold$which == i], ]  # set first 1/1oth dataset for test
+  mod_1 = lm(lnprov ~ acreage + pop_Density +  #estimate the linear model
+                agProd + high_income +
+                peer_review + 
+                ecosystemservicesgoal +
+                latitude + longitude, data= df_prov_acre)
+  newpred = predict(mod_1, newdata = test)   #predict with first test data
+  true = rep(mean(test$lnprov),nrow(test))   # find the original true dependent var from testdata
+  error=(true-newpred) #deviations of true from predicted dependent variable
+  
+#different measures of model fit
+  rmse=sqrt(mean(error^2)) 
+  mse=mean((newpred-true)^2)
+  R2=1-(sum((true-newpred)^2)/sum((true-mean(true))^2))
+  mae=mean(abs(error))
+  
+#storing results from the cross validation looping
+  temp2[fold$subsets[fold$which == i], ]$holdoutpred <- newpred
+  temp2[fold$subsets[fold$which == i], ]$RMSE=rmse
+  temp2[fold$subsets[fold$which == i], ]$MSE=mse
+  temp2[fold$subsets[fold$which == i], ]$MAE=mae
+  temp2[fold$subsets[fold$which == i], ]$R2=R2
+  temp2[fold$subsets[fold$which == i], ]$AIC=AIC(mod_1)
+  temp2[fold$subsets[fold$which == i], ]$BIC=BIC(mod_1)
+  temp2[fold$subsets[fold$which == i], ]$Fold=i
+}
+temp2
+
+temp2 %>% gather(., RMSE, MAE ,key ="Metric",value = "Value") %>% 
+  ggplot(aes(x=Metric,y=Value,fill=Metric)) + 
+  geom_boxplot() +
+  coord_flip() +
+  facet_wrap(~Metric, ncol=1, scales="free") +
+  theme_bw()
+
+temp2 %>% dplyr::select(RMSE, MAE) %>% map_dbl(median,na.rm=T)
+
 #repeated Cv
 cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
                                 agProd + high_income +
@@ -195,7 +248,106 @@ cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
                               trControl = train_control)
 print(cv_model_prov_restln)
 
-#B. Regulation Model
+#<<<<<<<<<<< CV using bayesian model <<<<<<<<<<<<<
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<mean value error
+set.seed(123) #set random seed for reprocibility of results
+
+#splitting a data set to do 10 fold cv using the cvTools package
+fold_cv = function(data,k){
+  folds=cvTools::cvFolds(nrow(df),K=k)
+  invisible(folds)
+}
+
+#We apply the fold_cv function on our dataset… We set k=10 for a 10 folds CV
+
+fold <- df_prov_acre %>% fold_cv(., k=10)
+str(fold)
+#creating a temp data to store results
+temp3 <- df_prov_acre %>% 
+  mutate(Fold=rep(0,nrow(df_prov_acre)),
+         holdoutpred=rep(0,nrow(df_prov_acre)),
+         MSE=rep(0,nrow(.)),
+         RMSE=rep(0,nrow(.)),
+         MAE=rep(0,nrow(.)),
+         R2=rep(0,nrow(.)),
+         AIC=rep(0,nrow(.)),
+         BIC=rep(0,nrow(.)))
+
+#bayesian model set up
+priors<-c(set_prior("normal(0,10)", class="b"),#prior for the beta's
+          set_prior("inv_gamma(.5,.5)", class="sigma"))#prior for the residual std. deviation
+mod_bay = brm(
+  lnprov ~ acreage + pop_Density +  #estimate the linear model
+    agProd + high_income +
+    peer_review + 
+    ecosystemservicesgoal +
+    latitude + longitude,
+  data= df_prov_acre,
+  prior = priors,
+  cores = 4,
+  warmup = 1000, 
+  iter = 10000,
+  control = list(adapt_delta = .99, max_treedepth = 20))
+summary(mod_bay)
+
+for(i in 1:10){
+  train=temp3[fold$subsets[fold$which != i], ]  #set the first n-1 dataset for training
+  test=temp3[fold$subsets[fold$which == i], ]  # set first 1/1oth dataset for test
+  mod_bay = brm(
+        lnprov ~ acreage + pop_Density +  #estimate the linear model
+        agProd + high_income +
+        peer_review + 
+        ecosystemservicesgoal +
+        latitude + longitude,
+        data= df_prov_acre,
+        prior = priors,
+        cores = 4,
+        warmup = 1000, 
+        iter = 5000,
+        control = list(adapt_delta = 0.98))
+  newpred = predict(mod_bay, newdata = test)   #predict with first test data
+  true = rep(mean(test$lnprov),nrow(test))   # find the original true dependent var from testdata
+  error=(true-newpred) #deviations of true from predicted dependent variable
+  
+  #different measures of model fit
+  rmse=sqrt(mean(error^2)) 
+  mse=mean((newpred-true)^2)
+  R2=1-(sum((true-newpred)^2)/sum((true-mean(true))^2))
+  mae=mean(abs(error))
+  
+  #storing results from the cross validation looping
+  temp3[fold$subsets[fold$which == i], ]$holdoutpred <- newpred
+  temp3[fold$subsets[fold$which == i], ]$RMSE=rmse
+  temp3[fold$subsets[fold$which == i], ]$MSE=mse
+  temp3[fold$subsets[fold$which == i], ]$MAE=mae
+  temp3[fold$subsets[fold$which == i], ]$R2=R2
+  temp3[fold$subsets[fold$which == i], ]$AIC=AIC(mod_bay)
+  temp3[fold$subsets[fold$which == i], ]$BIC=BIC(mod_bay)
+  temp3[fold$subsets[fold$which == i], ]$Fold=i
+}
+temp3
+
+temp3 %>% gather(., RMSE, MAE ,key ="Metric",value = "Value") %>% 
+  ggplot(aes(x=Metric,y=Value,fill=Metric)) + 
+  geom_boxplot() +
+  coord_flip() +
+  facet_wrap(~Metric, ncol=1, scales="free") +
+  theme_bw()
+
+temp3 %>% dplyr::select(RMSE, MAE) %>% map_dbl(median,na.rm=T)
+
+#repeated Cv
+cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
+                                agProd + high_income +
+                                peer_review + 
+                                ecosystemservicesgoal +
+                                latitude + longitude,
+                              data = df_prov_acre,
+                              method = "lm",
+                              trControl = train_control)
+print(cv_model_prov_restln)
+
+#B. <<<<<<<<<<<<<<<<< Regulation Model
 lm_full_reg <- lm(lnregul ~ lnacre + lnpop +
                      lnagprod + high_income +
                      peer_review + methodology + 
@@ -243,6 +395,9 @@ extractAIC(lm_full_reg_ln)  #best
 extractAIC(lm_full_reg_restln)
 
 #repeated Cv
+train_control <- trainControl(method = "repeatedcv", 
+                              number = 10, repeats = 3)
+
 cv_model_reg_restln <- train(lnregul ~ acreage + pop_Density +
                                agProd + high_income +
                                methodology + 
