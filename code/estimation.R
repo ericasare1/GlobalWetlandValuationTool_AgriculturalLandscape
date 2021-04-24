@@ -358,10 +358,11 @@ lmtest::bptest(lm_full_reg)  # Breusch-Pagan test
 car::vif(lm_full_reg)
 
 lm_full_reg_rest <- lm(lnregul ~ lnacre + lnpop +
-                          lnagprod + high_income +
-                          methodology + 
-                          lnamphibians + 
-                          ecosystemservicesgoal + latitude + longitude, data= df_regul_acre)
+                         lnagprod + high_income +
+                         methodology + 
+                         lnamphibians + 
+                         wl_policy + latitude + longitude,
+                       data = df_regul_acre)
 
 lmtest::bptest(lm_full_reg_rest)  # Breusch-Pagan test
 car::vif(lm_full_reg_rest)
@@ -388,15 +389,87 @@ lm_full_reg_restln <- lm(lnregul ~ acreage + pop_Density +
 lmtest::bptest(lm_full_reg_restln)  # Breusch-Pagan test
 car::vif(lm_full_reg_restln)
 summary(lm_full_reg_restln) 
+summary(lm_full_reg_rest) 
 
 extractAIC(lm_full_reg)
 extractAIC(lm_full_reg_rest)
 extractAIC(lm_full_reg_ln)  #best
 extractAIC(lm_full_reg_restln)
 
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<mean value error
+set.seed(123) #set random seed for reprocibility of results
+
+#splitting a data set to do 10 fold cv using the cvTools package
+fold_cv = function(data,k){
+  folds=cvTools::cvFolds(nrow(data),K=k)
+  invisible(folds)
+}
+
+#We apply the fold_cv function on our dataset… We set k=10 for a 10 folds CV
+
+fold_reg <- df_regul_acre %>% fold_cv(., k=10)
+str(fold_reg)
+#creating a temp data to store results
+temp_reg <- df_regul_acre %>% 
+  mutate(Fold=rep(0,nrow(df_regul_acre)),
+         holdoutpred=rep(0,nrow(df_regul_acre)),
+         MSE=rep(0,nrow(.)),
+         RMSE=rep(0,nrow(.)),
+         MAE=rep(0,nrow(.)),
+         R2=rep(0,nrow(.)),
+         AIC=rep(0,nrow(.)),
+         BIC=rep(0,nrow(.)))
+
+for(i in 1:10){
+  train_reg=temp_reg[fold_reg$subsets[fold_reg$which != i], ]  #set the first n-1 dataset for training
+  test_reg=temp_reg[fold_reg$subsets[fold_reg$which == i], ]  # set first 1/1oth dataset for test
+  mod_reg = lm(lnregul ~ lnacre + lnpop +
+               lnagprod + high_income +
+               methodology + 
+               lnamphibians + 
+               wl_policy + latitude + longitude, data= df_regul_acre)
+  newpred_reg = predict(mod_reg, newdata = test_reg, na.rm = T)   #predict with first test data
+  true_reg = rep(mean(test_reg$lnregul, na.rm = T),nrow(test_reg)) #find the original true dependent var from testdata
+  error_reg=(true_reg - newpred_reg) #deviations of true from predicted dependent variable
+  
+  #different measures of model fit
+  rmse_reg=sqrt(mean(error_reg^2)) 
+  mse_reg=mean((newpred_reg-true_reg)^2)
+  R2_reg=1-(sum((true_reg-newpred_reg)^2)/sum((true_reg-mean(true_reg))^2))
+  mae_reg=mean(abs(error_reg))
+  
+  #storing results from the cross validation looping
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$holdoutpred_reg <- newpred_reg
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$RMSE_reg=rmse_reg
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$MSE_reg=mse_reg
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$MAE_reg=mae_reg
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$R2_reg=R2_reg
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$AIC_reg=AIC(mod_1)
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$BIC_reg=BIC(mod_1)
+  temp_reg[fold_reg$subsets[fold_reg$which == i], ]$Fold_reg=i
+}
+temp2
+
+temp2 %>% gather(., RMSE, MAE ,key ="Metric",value = "Value") %>% 
+  ggplot(aes(x=Metric,y=Value,fill=Metric)) + 
+  geom_boxplot() +
+  coord_flip() +
+  facet_wrap(~Metric, ncol=1, scales="free") +
+  theme_bw()
+
+temp2 %>% dplyr::select(RMSE, MAE) %>% map_dbl(median,na.rm=T)
+
 #repeated Cv
-train_control <- trainControl(method = "repeatedcv", 
-                              number = 10, repeats = 3)
+set.seed(10000)
+cv_model_reg_rest <- train(lnregul ~ lnacre + lnpop +
+                                lnagprod + high_income +
+                                methodology + 
+                               lnamphibians + 
+                             wl_policy + latitude + longitude,
+                              data = df_regul_acre,
+                              method = "lm",
+                              trControl = train_control)
+print(cv_model_reg_rest)
 
 cv_model_reg_restln <- train(lnregul ~ acreage + pop_Density +
                                agProd + high_income +
