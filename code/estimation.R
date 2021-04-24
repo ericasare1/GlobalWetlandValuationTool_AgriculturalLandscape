@@ -6,13 +6,13 @@ if (!require(pacman)) {
   library(pacman)}
 
 # Load Packages
-p_load(sjPlot, tableone, stargazer, broom, tidyverse, lme4, car, MASS, WeMix, metafor, merTools,  brms, rstanarm, rstan, sjstats, lmerTest, caret)
+p_load(sjPlot, tableone, stargazer, broom, tidyverse, lme4, car, MASS, WeMix, metafor, merTools,brms, rstanarm, rstan, sjstats, lmerTest, caret)
 
 # Import data
 #-----------------------------------------------
 df_acre <- read_csv("data/final_estimation.csv") %>%
-  filter(!is.na(acreage)) %>% 
-  mutate(
+    filter(!is.na(acreage)) %>% 
+    mutate(
     lnprov = log(provisioning_US_ha +1),
     lnregul = log(regulation_US_ha +1),
     year = year - 1995 - 1,
@@ -31,44 +31,18 @@ df_acre <- read_csv("data/final_estimation.csv") %>%
     lnlong = log(log_mod)
   )
 
- 
-
-df <- read_csv("data/final_estimation.csv") %>%
-  mutate(
-    acreage = ifelse(acreage == NA, 0, acreage),
-    lnprov = log(provisioning_US_ha +1),
-    lnregul = log(regulation_US_ha +1),
-    year = year - 1995 - 1,
-    lnyear = log(year + 2),
-    lnacre = log(acreage + 1),
-    lnpop = log(pop_Density +1),
-    lnpcgdp = log(pcgdp + 1),
-    lnagprod = log(agProd),
-    lnamphibians = log(amphibians +1),
-    lnbirds = log(birds +1),
-    low_income = ifelse(low_lowmid_uppmid_high ==1,1,0),
-    high_income = ifelse(low_lowmid_uppmid_high ==3,1,0) 
-  )
-
-colSums(is.na(df))
-
-df_prov_acre <- df_acre %>% filter(id_prov == 1)
-df_prov <- df %>% filter(id_prov == 1)
-
-df_regul_acre <- df_acre %>% filter(id_regul == 1) 
-df_regul <- df %>% filter(id_regul == 1)
-
-
-
 str(df) #check the structure of variables
-colnames(df)     
+
+#Creating provisioning and regulating data sets
+df_prov_acre <- df_acre %>% filter(id_prov == 1)
+df_regul_acre <- df_acre %>% filter(id_regul == 1) 
 
 #function to scale variables to be between 0 and 1
 normalized <- function(x) {
   (x- min(x))/(max(x) - min(x))
 }
 
-# Variable Diagnostics
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Variable Diagnostics <<<<<<<<<<<<<<
 #A. checking the distribution of dependent variable
 qqp(df_prov$lnprov, "norm")
 
@@ -91,6 +65,7 @@ df_cor_prov <- df_prov_acre %>%
 
 cormat_prov <- round(cor(df_cor_prov),2)
 df_corel <- data.frame(cormat_prov) %>% View
+
 #Reshape above matrix
 library(reshape2)
 melted_cormat_prov <- melt(cormat_prov)
@@ -126,6 +101,7 @@ mixed_full_prov <- lmer(lnprov ~ lnacre + lnpop +
                           wl_policy + ecosystemservicesgoal +
                           usepenalties + 
                           latitude + longitude + (1 |studyid), data= df_prov_acre)
+#checking if the random coefficient model is really significant
 ranova(mixed_full_prov) 
 
 
@@ -136,8 +112,6 @@ mixed_full_reg <- lmer(lnregul ~ lnacre + lnpop +
                           wl_policy + ecosystemservicesgoal +
                           usepenalties + 
                           latitude + longitude + (1 |studyid), data= df_regul_acre)
-#Model Diagnostics
-#checking if the random coefficient model is really significant
 ranova(mixed_full_reg) 
 
 #<<<<<<<<<<<<<<<<< OLS  <<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -158,8 +132,15 @@ lm_full_prov_rest <- lm(lnprov ~ lnacre + lnpop +
                      ecosystemservicesgoal + latitude + longitude, data= df_prov_acre)
 summary(lm_full_prov)
 summary(lm_full_prov_rest)
-#A.1. log -linear prov
 
+#heteroscedasticity test
+lmtest::bptest(lm_full_prov)  # Breusch-Pagan test
+lmtest::bptest(lm_full_prov_rest)  # Breusch-Pagan test
+#multicollinearity
+car::vif(lm_full_prov)
+car::vif(lm_full_prov_rest)
+
+#A.1. log -linear prov
 lm_full_prov_ln <- lm(lnprov ~ acreage + pop_Density +
                       agProd + high_income +
                       peer_review + methodology +
@@ -175,8 +156,12 @@ lm_full_prov_restln <- lm(lnprov ~ acreage + pop_Density +
 summary(lm_full_prov_ln)
 summary(lm_full_prov_restln)
 
-lmtest::bptest(lm_full_prov_ll)  # Breusch-Pagan test
-car::vif(lm_full_prov)
+#heteroscedasticity test
+lmtest::bptest(lm_full_prov_ln)  # Breusch-Pagan test
+lmtest::bptest(lm_full_prov_restln)  # Breusch-Pagan test
+#multicollinearity
+car::vif(lm_full_prov_ln)
+car::vif(lm_full_prov_restln)
 
 #extracting AIC info for both models to examine how they compared to each other regarding model fit
 extractAIC(lm_full_prov)
@@ -420,14 +405,14 @@ train_control <- trainControl(method = "LOOCV")
 # as target variable and rest other column
 # as independent varaible
 model_loocv <- train(lnprov ~ lnacre + lnpop +
-                 lnagprod + high_income +
-                 peer_review + methodology +
-                 lnamphibians + lnbirds +
-                 wl_policy + ecosystemservicesgoal +
-                 usepenalties + useincentives + latitude + longitude,
-               data = df_prov_acre,
-               method = "lm",
-               trControl = train_control)
+                lnagprod + high_income +
+                peer_review + methodology +
+                lnamphibians + lnbirds +
+                wl_policy + ecosystemservicesgoal +
+                usepenalties + useincentives + latitude + longitude,
+                data = df_prov_acre,
+                method = "lm",
+                trControl = train_control)
 
 # printing model performance metrics
 # along with other details
@@ -444,21 +429,20 @@ set.seed(125)
 # defining training control
 # as cross-validation and
 # value of K equal to 10
-train_control <- trainControl(method = "cv",
-                              number = 10)
+train_control <- trainControl(method = "cv", number = 10)
 
 # training the model by assigning sales column
 # as target variable and rest other column
 # as independent varaible
 model_cv <- train(lnprov ~ lnacre + lnpop +
-                 lnagprod + high_income +
-                 peer_review + methodology +
-                 lnamphibians + lnbirds +
-                 wl_policy + ecosystemservicesgoal +
-                 usepenalties + useincentives + latitude + longitude,
-               data = df_prov_acre,
-               method = "lm",
-               trControl = train_control)
+                lnagprod + high_income +
+                peer_review + methodology +
+                lnamphibians + lnbirds +
+                wl_policy + ecosystemservicesgoal +
+                usepenalties + useincentives + latitude + longitude,
+                data = df_prov_acre,
+                method = "lm",
+                trControl = train_control)
 
 # printing model performance metrics
 # along with other details
@@ -466,10 +450,7 @@ print(model_cv)
 
 #splitting a data set to do 1o0 fold cv
 #gen some test data
-x <- runif(100)*10 #random number between 0 and 10
-y <- x + rnorm(100)*.1 #y =  x +error
-dataset <- data.frame(x,y)
-plot(dataset$x, dataset$y)
+
 
 fold_cv = function(data,k){
   folds=cvTools::cvFolds(nrow(dataset),K=k)
@@ -480,7 +461,7 @@ fold_cv = function(data,k){
 library(tidyverse)
 set.seed(123)
 
-fold<-dataset  %>% fold_cv(.,k=10)
+fold <-dataset  %>% fold_cv(.,k=10)
 str(fold)
 
 #Then we will create a FOR loop, as you already know, the for loop require an object that receives the results generated by the loop. Here is our object:
@@ -514,3 +495,22 @@ for(i in 1:10){
   temp[fold$subsets[fold$which == i], ]$BIC=BIC(newlm)
   temp[fold$subsets[fold$which == i], ]$Fold=i
 }
+
+#Randomly shuffle the data
+dataset <- dataset[sample(nrow(dataset)),]
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(dataset)),breaks=10,labels=FALSE)
+#Perform 10 fold cross validation
+for(i in 1:10){
+  #Segement your data by fold using the which() function 
+  testIndexes <- which(folds==i,arr.ind=TRUE)
+  testData <- dataset[testIndexes, ]
+  trainData <- dataset[-testIndexes, ]
+  #Use the test and train data partitions however you desire...
+  newlm <- lm(y~x,data=trainData) #Get your new linear model (just fit on the train data)
+  predictions <- predict(newlm,newdata=testData) #Get the predicitons for the validation set 
+  valuations <- data.frame( R2 = R2(predictions, testData$y),
+              RMSE = RMSE(predictions, testData$y),
+              MAE = MAE(predictions, testData$y))
+}
+
