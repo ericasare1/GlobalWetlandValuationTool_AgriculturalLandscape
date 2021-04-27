@@ -34,7 +34,7 @@ df_acre <- read_csv("data/final_estimation.csv") %>%
 str(df) #check the structure of variables
 
 #Creating provisioning and regulating data sets
-df_prov_acre <- df_acre %>% filter(id_prov == 1)
+df_prov_acre <- df_acre %>% filter(id_prov == 1) %>% mutate(mean_lnprov = mean(lnprov))
 df_regul_acre <- df_acre %>% filter(id_regul == 1) 
 
 #function to scale variables to be between 0 and 1
@@ -105,6 +105,7 @@ mixed_full_prov <- lmer(lnprov ~ lnacre + lnpop +
                           wl_policy + ecosystemservicesgoal +
                           usepenalties + 
                           latitude + longitude + (1 |studyid), data= df_prov_acre)
+
 #checking if the random coefficient model is really significant
 ranova(mixed_full_prov) 
 
@@ -165,7 +166,7 @@ lm_full_prov_ln <- lm(lnprov ~ acreage + pop_Density +
 
 lm_full_prov_restln <- lm(lnprov ~ acreage + pop_Density +
                             agProd + high_income +
-                            peer_review + 
+                            peer_review + amphibians + birds +
                             ecosystemservicesgoal +
                             latitude + longitude, data= df_prov_acre)
 summary(lm_full_prov_ln)
@@ -221,11 +222,11 @@ temp2 <- df_prov_acre %>%
 for(i in 1:10){
   train=temp2[fold$subsets[fold$which != i], ]  #set the first n-1 dataset for training
   test=temp2[fold$subsets[fold$which == i], ]  # set first 1/1oth dataset for test
-  mod_1 = lm(lnprov ~ acreage + pop_Density +  #estimate the linear model
-                agProd + high_income +
-                peer_review + 
-                ecosystemservicesgoal +
-                latitude + longitude, data = train)
+  mod_1 = lm(lnprov ~ acreage + pop_Density +
+               agProd + high_income +
+               peer_review + amphibians + birds +
+               ecosystemservicesgoal +
+               latitude + longitude, data = train)
   newpred = predict(mod_1, newdata = test)   #predict with first test data
   true = rep(mean(test$lnprov),nrow(test))   # find the original true dependent var from testdata
   error=(true-newpred) #deviations of true from predicted dependent variable
@@ -257,21 +258,39 @@ temp2 %>% gather(., RMSE, MAE ,key ="Metric",value = "Value") %>%
 
 temp2 %>% dplyr::select(RMSE, MAE) %>% map_dbl(median,na.rm=T)
 
-#repeated Cv
-cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
-                                agProd + high_income +
-                                peer_review + 
-                                ecosystemservicesgoal +
-                                latitude + longitude,
-                              data = df_prov_acre,
-                              method = "lm",
-                              trControl = train_control)
-print(cv_model_prov_restln)
+#using 
+set.seed(123)
+# creating training data as 80% of the dataset
+random_sample_prov <- createDataPartition(df_prov_acre$lnprov,
+                                         p = 0.8, list = FALSE)
+
+# generating training dataset
+# from the random_sample
+training_dataset_prov <- df_prov_acre[random_sample_prov, ]
+
+# generating testing dataset
+# from rows which are not
+# included in random_sample
+testing_dataset_prov <- df_prov_acre[-random_sample_prov, ]
+
+model_vs_prov <- lm(lnprov ~ acreage + pop_Density +  #estimate the linear model
+                     agProd + high_income +
+                     peer_review + 
+                     ecosystemservicesgoal +
+                     latitude + longitude, 
+                   data = training_dataset_prov)
+
+# predicting the target variable
+predictions_prov <- predict(model_vs_prov, testing_dataset_prov)
+# computing model performance metrics
+data.frame( RMSE_prov1 = RMSE(predictions_prov, testing_dataset_prov$mean_lnprov),
+            MAE_prov1 = MAE(predictions_prov, testing_dataset_prov$mean_lnprov))
 
 #repeated Cv
+set.seed(10000)
 cv_model_prov_restln <- train(lnprov ~ acreage + pop_Density +
                                 agProd + high_income +
-                                peer_review + 
+                                peer_review + amphibians + birds +
                                 ecosystemservicesgoal +
                                 latitude + longitude,
                               data = df_prov_acre,
@@ -284,6 +303,7 @@ df_regul <- df_regul_acre %>%
   dplyr::select(lnregul, acreage, pop_Density, agProd, high_income, birds, peer_review, methodology, 
                   birds, amphibians, wl_policy, useincentives, usepenalties, 
                    ecosystemservicesgoal, latitude, longitude, lnacre, lnpop, lnbirds, lnamphibians,lnagprod) %>%
+  mutate(mean_lnreg = mean(lnregul)) %>%
   filter(!is.na(.))
 
 lm_full_reg <- lm(lnregul ~ lnacre + lnpop +
@@ -303,7 +323,7 @@ lm_full_reg_rest <- lm(lnregul ~ lnacre + lnpop +
                        data = df_regul)
 
 lmtest::bptest(lm_full_reg_rest)  # Breusch-Pagan test
-car::vif(lm_full_reg_rest)
+ car::vif(lm_full_reg_rest)
 
 summary(lm_full_reg)
 summary(lm_full_reg_rest)
@@ -371,11 +391,11 @@ for(i in 1:10){
                  wl_policy + latitude + longitude,
                  data= train_reg)
   newpred_reg = predict(mod_reg, newdata = test_reg) #predict with first test data
-  true_reg = rep(mean(test_reg$lnregul), nrow(test_reg)) #find the original true dependent var from testdata
+  true_reg = test_reg$mean_lnreg #find the original true dependent var from testdata
   error_reg= (true_reg - newpred_reg) #deviations of true from predicted dependent variable
   #different measures of model fit
   rmse_reg=sqrt(mean(error_reg^2)) 
-  mse_reg=mean((newpred_reg-true_reg)^2)
+  mae_reg=mean(abs(error_reg))
   #storing results from the cross validation looping
   temp_reg[fold_reg$subsets[fold_reg$which == i], ]$holdoutpred_reg <- newpred_reg
   temp_reg[fold_reg$subsets[fold_reg$which == i], ]$RMSE_reg=rmse_reg
@@ -392,6 +412,34 @@ temp2 %>% gather(., RMSE, MAE ,key ="Metric",value = "Value") %>%
   theme_bw()
 
 temp2 %>% dplyr::select(RMSE, MAE) %>% map_dbl(median,na.rm=T)
+
+#using tle valu
+set.seed(123)
+# creating training data as 80% of the dataset
+random_sample_reg <- createDataPartition(df_regul$lnregul,
+                                     p = 0.8, list = FALSE)
+
+# generating training dataset
+# from the random_sample
+training_dataset_reg <- df_regul[random_sample, ]
+
+# generating testing dataset
+# from rows which are not
+# included in random_sample
+testing_dataset_reg <- df_regul[-random_sample, ]
+
+model_vs_reg <- lm(lnregul ~ lnacre + lnpop +
+                 lnagprod + high_income +
+                 methodology + 
+                 lnamphibians + 
+                 wl_policy + latitude + longitude, 
+               data = training_dataset)
+
+# predicting the target variable
+predictions_reg <- predict(model_vs, testing_dataset)
+# computing model performance metrics
+data.frame( RMSE_reg1 = RMSE(predictions_reg, testing_dataset_reg$mean_lnreg),
+            MAE_reg1 = MAE(predictions_reg, testing_dataset_reg$mean_lnreg))
 
 #repeated Cv
 set.seed(10000)
