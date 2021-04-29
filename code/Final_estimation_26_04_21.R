@@ -477,13 +477,19 @@ stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
 #.......Geo-spatial analysis----Create map of study locations
 pacman::p_load(sf, tmaptools, tmap)
 
+#Converting provision data to shp file
 df_prov_lat_log <- df_prov_acre %>%
   dplyr::select(latitude, longitude)
 
 df_prov_shp <- st_as_sf(df_prov_lat_log, coords = c("latitude", "longitude"))
 st_crs(df_prov_shp)
 
+#Converting regulation data to shp file
+df_reg_lat_log <- df_regul_acre %>%
+  dplyr::select(latitude, longitude)
 
+df_reg_shp <- st_as_sf(df_reg_lat_log, coords = c("latitude", "longitude"))
+plot(df_reg_shp)
 
 
 
