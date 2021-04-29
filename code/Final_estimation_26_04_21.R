@@ -481,7 +481,6 @@ pacman::p_load(sf, tmaptools, tmap, raster, sp, rgdal)
 #require(raster)
 df_prov_lat_log <- df_prov_acre %>%
   dplyr::select(latitude, longitude)
-
 points_crs <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 coords <- df_prov_lat_log[c("longitude", "latitude")]
 
@@ -490,10 +489,14 @@ prov_shp <- SpatialPointsDataFrame(
   df_prov_lat_log,
   proj4string = points_crs)
 
-utm_prov <- spTransform(prov_shp, CRS("+init=epsg:32616")) #transform to UTM
+utm_prov <- spTransform(prov_shp, CRS("+init=epsg:4326")) #transform to UTM
 
 writeOGR(utm_prov, dsn="data/provision_shp/prov_shp/", layer= "prov.shp", 
          driver="ESRI Shapefile", overwrite_layer=TRUE)
+
+prov_shp <- readOGR(dsn = "data/provision_shp/prov_shp/",
+                   layer = 'prov.shp')
+plot(prov_shp)
 
 #Converting regulation data to shp file
 df_reg_lat_log <- df_regul_acre %>%
@@ -507,13 +510,14 @@ reg_shp <- SpatialPointsDataFrame(
   df_reg_lat_log,
   proj4string = points_crs)
 
-utm_reg <- spTransform(reg_shp, CRS("+init=epsg:32616")) #transform to UTM
+utm_reg <- spTransform(reg_shp, CRS("+init=epsg:4326")) #transform to UTM
 
 writeOGR(utm_reg, dsn="data/provision_shp/reg_shp/", layer= "reg.shp", 
          driver="ESRI Shapefile", overwrite_layer=TRUE)
 
-
-
+reg_shp <- readOGR(dsn = "data/provision_shp/reg_shp/",
+                   layer = 'reg.shp')
+plot(reg_shp)
 
 
 
