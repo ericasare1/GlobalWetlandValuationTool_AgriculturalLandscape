@@ -31,6 +31,10 @@ df_acre <- read_csv("data/final_estimation.csv") %>%
     lnlong = log(log_mod)
   )
 
+df_acre %>% View()
+unique(df_acre$nation)
+nrow(df_acre)
+
 str(df) #check the structure of variables
 
 #Creating provisioning and regulating data sets
@@ -469,3 +473,26 @@ stargazer(lm_full_prov, lm_full_prov_ll, lm_full_reg, lm_full_reg_ll,
           out="output/model_results.doc",
           style = "qje",
           single.row = TRUE)
+
+#.......Geo-spatial analysis----Create map of study locations
+pacman::p_load(sf, tmaptools, tmap)
+
+df_prov_lat_log <- df_prov_acre %>%
+  dplyr::select(latitude, longitude)
+
+df_prov_shp <- st_as_sf(df_prov_lat_log, coords = c("latitude", "longitude"))
+st_crs(df_prov_shp)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
