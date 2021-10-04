@@ -4,7 +4,7 @@ Wetlands are beneficial to society in terms of flood protection, climate regulat
 
 # objective
 
-We develop a meta-regression value function that will be able to estimate the value of wetlands on agricultural landscapes, globally. We also investigate the usefulness of meta-regression functions, including ours in benefit transfers.
+We developed a meta-regression value function that will be able to estimate the value of wetlands on agricultural landscapes, globally. We also investigate the usefulness of meta-regression functions, including ours in benefit transfers.
 
 # Method
 
