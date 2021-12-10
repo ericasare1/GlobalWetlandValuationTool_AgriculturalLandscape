@@ -38,8 +38,10 @@ nrow(df_acre)
 str(df) #check the structure of variables
 
 #Creating provisioning and regulating data sets
-df_prov_acre <- df_acre %>% filter(id_prov == 1) %>% mutate(mean_lnprov = mean(lnprov))
-df_regul_acre <- df_acre %>% filter(id_regul == 1) 
+df_prov_acre <- df_acre %>% filter(id_prov == 1) %>% mutate(mean_lnprov = mean(lnprov), value =  exp(lnprov))
+df_regul_acre <- df_acre %>% filter(id_regul == 1) %>% mutate(value =  exp(lnregul))
+
+View(df_regul_acre )
 
 #function to scale variables to be between 0 and 1
 normalized <- function(x) {
@@ -175,6 +177,7 @@ lm_full_prov_restln <- lm(lnprov ~ acreage + pop_Density +
                             latitude + longitude, data= df_prov_acre)
 summary(lm_full_prov_ln)
 summary(lm_full_prov_restln)
+
 
 #heteroscedasticity test
 lmtest::bptest(lm_full_prov_ln)  # Breusch-Pagan test
