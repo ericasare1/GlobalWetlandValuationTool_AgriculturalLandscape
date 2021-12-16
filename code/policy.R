@@ -1,15 +1,36 @@
 library(tidyverse)
-lm_full_prov_restln
-write.csv(df_prov_acre, "data/prov_policy.csv")
-write.csv(df_regul_acre, "data/reg_policy.csv")
 
-lm_full_reg_rest
-df_regul
+df_acre <- read_csv("data/policy_data.csv") %>%
+  filter(!is.na(acreage)) %>% 
+  mutate(
+    lnprov = log(provisioning_US_ha +1),
+    lnregul = log(regulation_US_ha +1),
+    year = year - 1995 - 1,
+    lnyear = log(year + 2),
+    lnacre = log(acreage + 1),
+    lnpop = log(pop_Density +1),
+    lnpcgdp = log(pcgdp + 1),
+    lnagprod = log(agProd),
+    lnamphibians = log(amphibians +1),
+    lnbirds = log(birds +1),
+    low_income = ifelse(low_lowmid_uppmid_high ==1,1,0),
+    high_income = ifelse(low_lowmid_uppmid_high ==3,1,0),
+    lat_mod = latitude + 38,
+    log_mod = longitude + 128,
+    lnlat = log(lat_mod),
+    lnlong = log(log_mod)
+  )
 
-prov_data <- read.csv("data/prov_policy.csv")
-reg_data <- read.csv("data/reg_policy.csv")
+df_prov_acre <- df_acre %>% filter(id_prov == 1) %>% mutate(mean_lnprov = mean(lnprov), value =  exp(lnprov))
+df_regul_acre <- df_acre %>% filter(id_regul == 1) %>% mutate(value =  exp(lnregul))
 
-reg_data %>% View()
+df_regul <- df_regul_acre %>%
+  dplyr::select(lnregul, acreage, pop_Density, agProd, high_income, birds, peer_review, methodology, 
+                birds, amphibians, wl_policy, useincentives, usepenalties, 
+                ecosystemservicesgoal, latitude, longitude, lnacre, lnpop, lnbirds, lnamphibians,lnagprod) %>%
+  mutate(mean_lnreg = mean(lnregul)) %>%
+  filter(!is.na(.))
+
 library(merTools)
 #https://www.rdocumentation.org/packages/merTools/versions/0.5.2/topics/predictInterval
 prov_pred <- data.frame(predict(lm_full_prov_restln, newdata = prov_data, interval="predict", level = 0.95, seed = 235, nsims = 1000)) %>%
