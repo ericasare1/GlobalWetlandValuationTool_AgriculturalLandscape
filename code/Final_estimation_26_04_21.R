@@ -24,6 +24,7 @@ df_acre <- read_csv("data/final_estimation.csv") %>%
     lnamphibians = log(amphibians +1),
     lnbirds = log(birds +1),
     low_income = ifelse(low_lowmid_uppmid_high ==1,1,0),
+    middle_income = ifelse(low_lowmid_uppmid_high ==2,1,0),
     high_income = ifelse(low_lowmid_uppmid_high ==3,1,0),
     lat_mod = latitude + 38,
     log_mod = longitude + 128,
@@ -37,9 +38,51 @@ nrow(df_acre)
 
 str(df) #check the structure of variables
 
+
+
 #Creating provisioning and regulating data sets
 df_prov_acre <- df_acre %>% filter(id_prov == 1) %>% mutate(mean_lnprov = mean(lnprov), value =  exp(lnprov))
+df_prov_low <- df_prov_acre %>% filter(low_income ==1)
+df_prov_med <- df_prov_acre %>% filter(middle_income ==1)
+df_prov_high <- df_prov_acre %>% filter(high_income ==1)
+
+mean(df_prov_low$provisioning_US_ha)
+max(df_prov_low$provisioning_US_ha)
+min(df_prov_low$provisioning_US_ha)
+
+mean(df_prov_med$provisioning_US_ha)
+max(df_prov_med$provisioning_US_ha)
+min(df_prov_med$provisioning_US_ha)
+
+
+mean(df_prov_high$provisioning_US_ha)
+max(df_prov_high$provisioning_US_ha)
+min(df_prov_high$provisioning_US_ha)
+
+
 df_regul_acre <- df_acre %>% filter(id_regul == 1) %>% mutate(value =  exp(lnregul))
+df_reg_low <- df_regul_acre %>% filter(low_income ==1)
+df_reg_med <- df_regul_acre %>% filter(middle_income ==1)
+df_reg_high <- df_regul_acre %>% filter(high_income ==1)
+
+mean(df_reg_low$regulation_US_ha)
+max(df_reg_low$regulation_US_ha)
+min(df_reg_low$regulation_US_ha)
+
+
+
+mean(df_reg_med$regulation_US_ha)
+max(df_reg_med$regulation_US_ha)
+min(df_reg_med$regulation_US_ha)
+
+
+
+mean(df_reg_high$regulation_US_ha)
+max(df_reg_high$regulation_US_ha)
+min(df_reg_high$regulation_US_ha)
+
+
+
 
 View(df_regul_acre )
 

@@ -1,0 +1,7 @@
+﻿studyid,Paper,acreage,year,peer_review,methodology,nation,wl_policy,ecosystemservicesgoal,usepenalties,useincentives,low_lowmid_uppmid_high,latitude,longitude,pop_Density,agProd,pcgdp,amphibians,birds,provisioning_US_ha,regulation_US_ha,id_prov,id_regul,Provisioning,Regulation
+38,Rouquette et al. (2011) a,900,2011,1,0,United Kingdoms,0,1,0,1,3,53.3942038,-0.7790899,909.334473,107,43324,5,141,5800,6864.88326,1,1,2117000,2505682.39
+42,Smith et al. (2011),120000,2011,1,0,United States,1,1,1,1,3,37.5398233,-102.9452593,0.04,118,54579,13,167,1155,0,1,0,421575,0
+40,Schuijt and Brander,10320,2004,0,1,New Zeland,1,1,1,1,3,-37.3568,175.0955,18.39,107,37997,2,139,58.24001938,,1,0,21257.60707,0
+21,L. Emerton (ed) 2005,287000,2005,0,1,Sri lanka,1,1,1,1,1,8.2419,79.9619,2.35,128,3936,15,291,8.139726027,0,1,0,2971,0
+39,Schuijt (2000,240000,2002,0,1,Malawi,1,1,0,1,0,-15.255,35.718,25.95,106,516.7,44,477,87.7,,1,0,32010.5,0
+,,,,,,,,,,,,,,,,,,,,,,,,
